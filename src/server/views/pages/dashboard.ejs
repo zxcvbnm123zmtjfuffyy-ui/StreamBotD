@@ -1,178 +1,307 @@
-<div class="container my-5" id="main-content">
-	<div class="d-flex justify-content-between align-items-center mb-4">
-		<h1 class="mb-0">StreamBot Video Manager</h1>
-	</div>
-
-	<ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
-		<li class="nav-item" role="presentation">
-			<button class="nav-link active" id="list-tab"
-				data-bs-toggle="tab" data-bs-target="#list" type="button" role="tab"
-				aria-controls="list" aria-selected="true" aria-label="View file list">File List</button>
-		</li>
-		<li class="nav-item" role="presentation">
-			<button class="nav-link" id="upload-tab"
-				data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab"
-				aria-controls="upload" aria-selected="false" aria-label="Upload new files">Upload</button>
-		</li>
-	</ul>
-
-	<div class="tab-content" id="myTabContent">
-		<div class="tab-pane fade show active" id="list" role="tabpanel" aria-labelledby="list-tab">
-			<div class="card">
-				<div class="card-header">
-					<h5 class="card-title mb-0">Video Files</h5>
-				</div>
-				<div class="card-body">
-					<div class="table-responsive">
-						<table class="table table-striped" role="table" aria-label="Video files list">
-							<thead>
-								<tr role="row">
-									<th scope="col" role="columnheader">Name</th>
-									<th scope="col" role="columnheader">Size</th>
-									<th scope="col" role="columnheader">Actions</th>
-								</tr>
-							</thead>
-							<tbody>
-								<% if (typeof files !== 'undefined' && files.length > 0) { %>
-									<% files.forEach(function(file) { %>
-									<tr>
-										<td><%= file.name %></td>
-										<td><%= file.size %></td>
-										<td>
-											<a href="/preview/<%= encodeURIComponent(file.name) %>" class="btn btn-sm btn-outline-primary me-1 btn-icon"
-											   aria-label="Preview <%= file.name %>" title="Preview <%= file.name %>">
-												<i class="fas fa-eye" aria-hidden="true"></i>
-											</a>
-											<button class="btn btn-sm btn-outline-secondary me-1 btn-icon"
-													onclick="copyFileName('<%= file.name %>')"
-													aria-label="Copy <%= file.name %> to clipboard"
-													title="Copy <%= file.name %> to clipboard">
-												<i class="fas fa-clipboard" aria-hidden="true"></i>
-											</button>
-											<button class="btn btn-sm btn-outline-danger btn-icon"
-													aria-label="Delete <%= file.name %>"
-													title="Delete <%= file.name %>"
-													onclick="showDeleteModal('<%= file.name %>', '/delete/<%= encodeURIComponent(file.name) %>')">
-												<i class="fas fa-trash" aria-hidden="true"></i>
-											</button>
-										</td>
-									</tr>
-									<% }); %>
-								<% } else { %>
-									<tr>
-										<td colspan="3" class="text-center text-muted">No video files found</td>
-									</tr>
-								<% } %>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
-			<div class="row">
-				<div class="col-md-6 mb-3">
-					<div class="card">
-						<div class="card-header">
-							<h5 class="card-title mb-0">Upload</h5>
-						</div>
-						<div class="card-body">
-							<form action="/api/upload" method="post" enctype="multipart/form-data" id="localUploadForm">
-								<div class="mb-3">
-									<label for="localFileInput" class="form-label">Choose video file</label>
-									<input type="file" class="form-control" id="localFileInput" name="file" accept="video/*" required>
-								</div>
-								<div class="mb-3 d-none" id="localProgressContainer">
-									<label class="form-label">Upload Progress</label>
-									<div class="progress" style="height: 25px;">
-										<div class="progress-bar progress-bar-striped progress-bar-animated"
-											 id="localProgressBar" role="progressbar" style="width: 0%">
-											<span id="localProgressText">0%</span>
-										</div>
-									</div>
-									<small class="text-muted" id="localProgressStatus">Starting upload...</small>
-								</div>
-								<div class="d-flex gap-2">
-									<button type="button" class="btn btn-primary" id="localUploadBtn" onclick="startLocalUpload()">
-										<span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-										<i class="fas fa-upload me-1" aria-hidden="true"></i>Upload
-									</button>
-									<button type="button" class="btn btn-secondary d-none" id="localCancelBtn" onclick="cancelLocalUpload()">
-										<i class="fas fa-times me-1" aria-hidden="true"></i>Cancel
-									</button>
-								</div>
-							</form>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 mb-3">
-					<div class="card">
-						<div class="card-header">
-							<h5 class="card-title mb-0">Remote Upload</h5>
-						</div>
-						<div class="card-body">
-							<form action="/api/remote_upload" method="post" enctype="multipart/form-data" id="remoteUploadForm">
-								<div class="mb-3">
-									<label for="remoteFileInput" class="form-label">Enter video URL</label>
-									<input type="url" class="form-control" id="remoteFileInput" name="link" placeholder="https://example.com/video.mp4" required>
-								</div>
-								<div class="mb-3 d-none" id="remoteProgressContainer">
-									<label class="form-label">Download Progress</label>
-									<div class="progress" style="height: 25px;">
-										<div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
-											 id="remoteProgressBar" role="progressbar" style="width: 0%">
-											<span id="remoteProgressText">0%</span>
-										</div>
-									</div>
-									<small class="text-muted" id="remoteProgressStatus">Starting download...</small>
-								</div>
-								<div class="d-flex gap-2">
-									<button type="button" class="btn btn-primary" id="remoteUploadBtn" onclick="startRemoteUpload()">
-										<span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-										<i class="fas fa-download me-1" aria-hidden="true"></i>Download
-									</button>
-									<button type="button" class="btn btn-secondary d-none" id="remoteCancelBtn" onclick="cancelRemoteUpload()">
-										<i class="fas fa-times me-1" aria-hidden="true"></i>Cancel
-									</button>
-								</div>
-							</form>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Delete Confirmation Modal -->
-	<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h5 class="modal-title" id="deleteModalLabel">
-						<i class="fas fa-exclamation-triangle text-warning me-2" aria-hidden="true"></i>
-						Confirm Deletion
-					</h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="margin: 0;"></button>
-				</div>
-				<div class="modal-body">
-					<div class="text-center mb-3">
-						<i class="fas fa-trash text-danger fa-3x mb-3" aria-hidden="true"></i>
-						<h6 class="mb-3">Are you sure you want to delete this video file?</h6>
-						<p class="mb-2 text-muted">
-							<strong id="deleteFileName"></strong>
-						</p>
-						<small class="text-muted">This action cannot be undone.</small>
-					</div>
-				</div>
-				<div class="modal-footer justify-content-center">
-					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-						<i class="fas fa-times me-1" aria-hidden="true"></i>Cancel
-					</button>
-					<a id="confirmDeleteBtn" href="#" class="btn btn-danger">
-						<i class="fas fa-trash me-1" aria-hidden="true"></i>Delete File
-					</a>
-				</div>
-			</div>
-		</div>
-	</div>
+<!-- Page header -->
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Video Manager</h1>
+    <p class="page-subtitle">Manage and stream your local video library</p>
+  </div>
+  <div class="header-stats">
+    <div class="stat-chip">
+      <i class="fas fa-film"></i>
+      <span><%= typeof files !== 'undefined' ? files.length : 0 %> Videos</span>
+    </div>
+  </div>
 </div>
+
+<!-- Tab navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="files">
+    <i class="fas fa-folder-open"></i> Library
+  </button>
+  <button class="tab-btn" data-tab="upload">
+    <i class="fas fa-upload"></i> Upload
+  </button>
+</div>
+
+<!-- FILES TAB -->
+<div class="tab-content active" id="tab-files">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title"><i class="fas fa-film"></i> Video Library</h2>
+      <div class="card-actions">
+        <div class="search-box">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="text" id="fileSearch" placeholder="Search videos..." oninput="filterFiles(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <% if (typeof files !== 'undefined' && files.length > 0) { %>
+    <div class="file-grid" id="fileGrid">
+      <% files.forEach(function(file) { %>
+      <div class="file-card" data-name="<%= file.name.toLowerCase() %>">
+        <div class="file-thumb">
+          <i class="fas fa-file-video"></i>
+          <div class="file-overlay">
+            <a href="/preview/<%= encodeURIComponent(file.name) %>" class="overlay-btn" title="Preview">
+              <i class="fas fa-play"></i>
+            </a>
+          </div>
+        </div>
+        <div class="file-info">
+          <p class="file-name" title="<%= file.name %>"><%= file.name %></p>
+          <span class="file-size"><%= file.size %></span>
+        </div>
+        <div class="file-actions">
+          <button class="icon-btn" onclick="copyFileName('<%= file.name %>')" title="Copy name">
+            <i class="fas fa-copy"></i>
+          </button>
+          <a href="/preview/<%= encodeURIComponent(file.name) %>" class="icon-btn" title="Preview">
+            <i class="fas fa-eye"></i>
+          </a>
+          <button class="icon-btn danger" onclick="showDeleteModal('<%= file.name %>', '/delete/<%= encodeURIComponent(file.name) %>')" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+    <% } else { %>
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-film"></i></div>
+      <h3>No Videos Yet</h3>
+      <p>Upload your first video using the Upload tab</p>
+      <button class="btn btn-primary" onclick="switchTab('upload')">
+        <i class="fas fa-upload"></i> Upload Now
+      </button>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- UPLOAD TAB -->
+<div class="tab-content" id="tab-upload">
+  <div class="upload-grid">
+
+    <!-- Local upload -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="fas fa-hard-drive"></i> Local Upload</h2>
+      </div>
+      <div class="card-body">
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-icon"><i class="fas fa-cloud-arrow-up"></i></div>
+          <p class="drop-text">Drag & drop your video here</p>
+          <p class="drop-sub">or click to browse files</p>
+          <input type="file" id="localFileInput" name="file" accept="video/*" style="display:none">
+          <button class="btn btn-outline" onclick="document.getElementById('localFileInput').click()">
+            <i class="fas fa-folder-open"></i> Browse
+          </button>
+        </div>
+
+        <div class="selected-file" id="selectedFile" style="display:none">
+          <i class="fas fa-file-video"></i>
+          <span id="selectedFileName">No file selected</span>
+          <button class="clear-file" onclick="clearFile()"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="progress-wrap" id="localProgressWrap" style="display:none">
+          <div class="progress-header">
+            <span>Uploading...</span>
+            <span id="localProgressPct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="localProgressBar"></div>
+          </div>
+          <small id="localProgressStatus">Starting upload...</small>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="localUploadBtn" onclick="startLocalUpload()">
+            <i class="fas fa-upload"></i> Upload
+          </button>
+          <button class="btn btn-ghost" id="localCancelBtn" style="display:none" onclick="cancelLocalUpload()">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Remote upload -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="fas fa-link"></i> Remote Upload</h2>
+      </div>
+      <div class="card-body">
+        <div class="input-group-styled">
+          <label class="input-label">Video URL</label>
+          <div class="input-with-icon">
+            <i class="fas fa-globe"></i>
+            <input type="url" id="remoteFileInput" name="link"
+              placeholder="https://example.com/video.mp4"
+              class="styled-input">
+          </div>
+          <p class="input-hint">Direct links to .mp4, .mkv, .webm and other video formats</p>
+        </div>
+
+        <div class="progress-wrap" id="remoteProgressWrap" style="display:none">
+          <div class="progress-header">
+            <span>Downloading...</span>
+            <span id="remoteProgressPct">0%</span>
+          </div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill accent2" id="remoteProgressBar"></div>
+          </div>
+          <small id="remoteProgressStatus">Fetching file...</small>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="remoteUploadBtn" onclick="startRemoteUpload()">
+            <i class="fas fa-download"></i> Download
+          </button>
+          <button class="btn btn-ghost" id="remoteCancelBtn" style="display:none" onclick="cancelRemoteUpload()">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    switchTab(btn.dataset.tab);
+  });
+});
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
+  document.getElementById(`tab-${tabName}`)?.classList.add('active');
+}
+
+// File search
+function filterFiles(query) {
+  document.querySelectorAll('.file-card').forEach(card => {
+    const name = card.dataset.name || '';
+    card.style.display = name.includes(query.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// Drag and drop
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('localFileInput');
+
+dropZone?.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone?.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) setSelectedFile(file);
+});
+
+fileInput?.addEventListener('change', () => {
+  if (fileInput.files[0]) setSelectedFile(fileInput.files[0]);
+});
+
+function setSelectedFile(file) {
+  document.getElementById('selectedFileName').textContent = file.name;
+  document.getElementById('selectedFile').style.display = 'flex';
+  dropZone.style.display = 'none';
+}
+
+function clearFile() {
+  fileInput.value = '';
+  document.getElementById('selectedFile').style.display = 'none';
+  dropZone.style.display = 'flex';
+}
+
+// Local upload
+let localXhr = null;
+function startLocalUpload() {
+  const file = fileInput.files[0];
+  if (!file) { showToast('Please select a file first', 'warn'); return; }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  document.getElementById('localProgressWrap').style.display = 'block';
+  document.getElementById('localUploadBtn').style.display = 'none';
+  document.getElementById('localCancelBtn').style.display = 'inline-flex';
+
+  localXhr = new XMLHttpRequest();
+  localXhr.open('POST', '/api/upload');
+
+  localXhr.upload.onprogress = e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      document.getElementById('localProgressBar').style.width = pct + '%';
+      document.getElementById('localProgressPct').textContent = pct + '%';
+      document.getElementById('localProgressStatus').textContent = `${(e.loaded/1024/1024).toFixed(1)} MB of ${(e.total/1024/1024).toFixed(1)} MB`;
+    }
+  };
+
+  localXhr.onload = () => {
+    const data = JSON.parse(localXhr.responseText);
+    if (data.success) {
+      showToast(`✓ Uploaded: ${data.filename}`, 'success');
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      showToast('Upload failed: ' + data.message, 'error');
+      resetLocalUpload();
+    }
+  };
+
+  localXhr.onerror = () => { showToast('Upload failed', 'error'); resetLocalUpload(); };
+  localXhr.send(formData);
+}
+
+function cancelLocalUpload() { localXhr?.abort(); resetLocalUpload(); showToast('Upload cancelled', 'info'); }
+function resetLocalUpload() {
+  document.getElementById('localProgressWrap').style.display = 'none';
+  document.getElementById('localUploadBtn').style.display = 'inline-flex';
+  document.getElementById('localCancelBtn').style.display = 'none';
+  document.getElementById('localProgressBar').style.width = '0%';
+}
+
+// Remote upload
+function startRemoteUpload() {
+  const url = document.getElementById('remoteFileInput').value.trim();
+  if (!url) { showToast('Please enter a URL', 'warn'); return; }
+
+  document.getElementById('remoteProgressWrap').style.display = 'block';
+  document.getElementById('remoteUploadBtn').style.display = 'none';
+  document.getElementById('remoteCancelBtn').style.display = 'inline-flex';
+  document.getElementById('remoteProgressStatus').textContent = 'Starting download...';
+
+  const formData = new FormData();
+  formData.append('link', url);
+
+  fetch('/api/remote_upload', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('remoteProgressBar').style.width = '100%';
+        document.getElementById('remoteProgressPct').textContent = '100%';
+        showToast(`✓ Downloaded: ${data.filename}`, 'success');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('Download failed: ' + data.message, 'error');
+        resetRemoteUpload();
+      }
+    })
+    .catch(() => { showToast('Download failed', 'error'); resetRemoteUpload(); });
+}
+
+function cancelRemoteUpload() { resetRemoteUpload(); showToast('Download cancelled', 'info'); }
+function resetRemoteUpload() {
+  document.getElementById('remoteProgressWrap').style.display = 'none';
+  document.getElementById('remoteUploadBtn').style.display = 'inline-flex';
+  document.getElementById('remoteCancelBtn').style.display = 'none';
+  document.getElementById('remoteProgressBar').style.width = '0%';
+}
+</script>
