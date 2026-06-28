@@ -18,6 +18,11 @@ import previewRoutes from "./routes/preview.js";
 
 const app = express();
 
+// ✅ نقطة الصحة (Health Check) لتجنب SIGTERM من Render
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
 // Configure EJS templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'src/server/views'));
@@ -29,10 +34,10 @@ app.set('layout', 'layouts/main');
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
-	secret: 'streambot-2024',
-	resave: false,
-	saveUninitialized: true,
-	cookie: { secure: process.env.NODE_ENV === 'production' }
+    secret: 'streambot-2024',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
 // Serve static files from public directory
@@ -40,9 +45,9 @@ app.use(express.static(path.join(process.cwd(), 'src/server/public')));
 
 // Make helper functions available to all templates
 app.use((req, res, next) => {
-	res.locals.stringify = stringify;
-	res.locals.prettySize = prettySize;
-	next();
+    res.locals.stringify = stringify;
+    res.locals.prettySize = prettySize;
+    next();
 });
 
 // Apply authentication middleware to all routes except login
@@ -56,20 +61,20 @@ app.use('/', previewRoutes);
 
 // Create necessary directories
 if (!fs.existsSync(config.videosDir)) {
-	fs.mkdirSync(config.videosDir);
+    fs.mkdirSync(config.videosDir, { recursive: true });
 }
 
 if (!fs.existsSync(path.dirname(config.previewCacheDir))) {
-	fs.mkdirSync(path.dirname(config.previewCacheDir), { recursive: true });
+    fs.mkdirSync(path.dirname(config.previewCacheDir), { recursive: true });
 }
 
 if (!fs.existsSync(config.previewCacheDir)) {
-	fs.mkdirSync(config.previewCacheDir);
+    fs.mkdirSync(config.previewCacheDir, { recursive: true });
 }
 
 // Start server
 app.listen(config.server_port, () => {
-	logger.info(`Server is running on port ${config.server_port}`);
+    logger.info(`Server is running on port ${config.server_port}`);
 });
 
 export default app;
