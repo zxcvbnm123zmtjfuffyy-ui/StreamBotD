@@ -10,20 +10,18 @@ export async function handleMessageCreate(
 	streamingService: any,
 	commandManager: CommandManager
 ): Promise<void> {
-	// Ignore bots, self, non-command channels, and non-commands
+	// تجاهل البوتات والرسائل من قنوات غير مصرح بها وغير الأوامر
+	// ✅ BUG FIX: أُزيل شرط message.author.id === message.client.user?.id
+	// لأن السيلف بوت يحتاج يستقبل أوامره الخاصة
 	if (
 		message.author.bot ||
-		message.author.id === message.client.user?.id ||
+		message.channel.id !== config.cmdChannelId ||
 		!message.content.startsWith(config.prefix)
 	) return;
 
-	// Split command and arguments
 	const args = message.content.slice(config.prefix!.length).trim().split(/ +/);
 
-	// If no command provided, ignore
-	if (args.length === 0) {
-		return;
-	}
+	if (args.length === 0) return;
 
 	const commandName = args.shift()!.toLowerCase();
 
