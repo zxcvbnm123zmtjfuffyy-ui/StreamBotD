@@ -10,8 +10,12 @@ import { upload } from '../middleware/multer.js';
 const router = Router();
 const agent = new https.Agent({ rejectUnauthorized: false });
 
-// Upload route - local file with progress support
+// ✅ BUG FIX: أُضيف null check على req.file
 router.post("/api/upload", upload.single("file"), (req, res) => {
+    if (!req.file) {
+        res.status(400).json({ success: false, message: "No file was uploaded" });
+        return;
+    }
     res.json({
         success: true,
         message: "File uploaded successfully",
@@ -20,49 +24,34 @@ router.post("/api/upload", upload.single("file"), (req, res) => {
     });
 });
 
-// Upload route - remote file with progress support
+// ✅ BUG FIX: أُزيل الحساب المزدوج لـ downloaded (كان يُحسب مرتين)
 router.post("/api/remote_upload", upload.single("link"), async (req, res) => {
     const link = req.body.link;
-    const filename = link.substring(link.lastIndexOf('/') + 1);
+    if (!link) {
+        res.status(400).json({ success: false, message: "No URL provided" });
+        return;
+    }
+
+    const filename = link.substring(link.lastIndexOf('/') + 1) || 'video.mp4';
     const filepath = path.join(config.videosDir, filename);
 
     try {
-        // First, get the file info to determine size
         const headResponse = await axios.head(link, { httpsAgent: agent });
-        
-        // ✅ FIX: Convert content-length to string safely
         const totalSize = parseInt(String(headResponse.headers['content-length'] ?? 0), 10);
-
-        // Set up progress tracking
-        let downloaded = 0;
-        let lastProgressSent = 0;
 
         const response = await axios.get(link, {
             responseType: "stream",
-            httpsAgent: agent,
-            onDownloadProgress: (progressEvent) => {
-                downloaded = progressEvent.loaded;
-                const percentCompleted = Math.round((downloaded * 100) / totalSize);
-
-                // Send progress updates every 2%
-                if (percentCompleted - lastProgressSent >= 2) {
-                    lastProgressSent = percentCompleted;
-                    logger.info(`Remote download progress: ${percentCompleted}%`);
-                }
-            }
+            httpsAgent: agent
         });
 
         const writer = fs.createWriteStream(filepath);
+        let downloaded = 0;
 
-        response.data.on('data', (chunk) => {
+        // ✅ FIX: تتبع التقدم من data فقط، مش onDownloadProgress و data معاً
+        response.data.on('data', (chunk: Buffer) => {
             downloaded += chunk.length;
-            const percentCompleted = Math.round((downloaded * 100) / totalSize);
-
-            // Send progress updates every 2%
-            if (percentCompleted - lastProgressSent >= 2) {
-                lastProgressSent = percentCompleted;
-                logger.info(`Remote download progress: ${percentCompleted}%`);
-            }
+            const pct = totalSize > 0 ? Math.round((downloaded * 100) / totalSize) : 0;
+            logger.info(`Remote download progress: ${pct}% (${downloaded}/${totalSize})`);
         });
 
         response.data.pipe(writer);
@@ -71,14 +60,14 @@ router.post("/api/remote_upload", upload.single("link"), async (req, res) => {
             res.json({
                 success: true,
                 message: "Remote file downloaded successfully",
-                filename: filename,
+                filename,
                 size: downloaded
             });
         });
 
         writer.on("error", (err) => {
             logger.error(err);
-            res.status(500).json({ success: false, message: "Error downloading file" });
+            res.status(500).json({ success: false, message: "Error writing file" });
         });
     } catch (err) {
         logger.error(err);
