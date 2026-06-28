@@ -17,7 +17,7 @@ import { QueueService } from './services/queue.js';
 // ✅ معالجة إشارة SIGTERM من Render (يمنع القتل المفاجئ)
 process.on('SIGTERM', () => {
     console.log('🛑 Received SIGTERM. Shutting down gracefully...');
-    if (client) client.destroy().catch(() => {});
+    if (client) client.destroy();
     process.exit(0);
 });
 
